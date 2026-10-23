@@ -41,7 +41,7 @@
             </div>
         </header>
         <div class="tabs" id="tabs-container">
-            <button class="tab active" onclick="switchTab('dashboard')">📊 Comparativo</button>
+            <button class="tab active" onclick="switchTab('dashboard', window.event)">📊 Comparativo</button>
         </div>
         <div id="panels-container">
             <div id="panel-dashboard" class="panel active">
@@ -70,14 +70,18 @@
             render();
         }
 
-        function switchTab(id) {
+        function switchTab(id, evt) {
             document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
             document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
             
             const p = document.getElementById('panel-' + id);
             if (p) p.classList.add('active');
             
-            if (event && event.currentTarget) event.currentTarget.classList.add('active');
+            if (evt && evt.currentTarget) {
+                evt.currentTarget.classList.add('active');
+            } else if (window.event && window.event.currentTarget) {
+                window.event.currentTarget.classList.add('active');
+            }
         }
 
         function addGasto(m) {
@@ -152,7 +156,7 @@
         const pc = document.getElementById('panels-container');
         
         meses.forEach(m => {
-            tc.innerHTML += `<button class="tab" onclick="switchTab('${m}')">${m}</button>`;
+            tc.innerHTML += `<button class="tab" onclick="switchTab('${m}', window.event)">${m}</button>`;
             pc.innerHTML += `
                 <div id="panel-${m}" class="panel">
                     <h2>${m}</h2>
