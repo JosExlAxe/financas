@@ -10,7 +10,7 @@
         .app-container { width: 100%; max-width: 1000px; }
         header { margin-bottom: 2rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; }
         h1 { font-size: 1.6rem; color: var(--primary); }
-        .gerenciar-categorias { display: flex; gap: 0.5rem; background: var(--surface); padding: 0.5rem; border: 1px solid var(--border); border-radius: 0.5rem; align-items: center; flex-wrap: wrap; }
+        .gerenciar-categorias { display: flex; gap: 0.5rem; background: var(--surface); padding: 0.5rem; border: 1px solid var(--border); border-radius: 0.5rem; align-items: center; }
         .tabs { display: flex; gap: 0.25rem; border-bottom: 2px solid var(--border); margin-bottom: 1.5rem; overflow-x: auto; }
         .tab { padding: 0.6rem 1rem; border: none; background: none; font-weight: 600; cursor: pointer; color: #64748b; }
         .tab.active { background: var(--primary); color: white; border-radius: 0.375rem 0.375rem 0 0; }
@@ -32,18 +32,16 @@
 <body>
     <div class="app-container">
         <header>
-            <div>
-                <h1>Finanças Pessoais</h1>
-            </div>
+            <h1>Finanças Pessoais</h1>
             <div class="gerenciar-categorias">
-                <input type="text" id="nova-categoria-input" placeholder="Nova categoria...">
-                <button onclick="adicionarNovaCategoriaGlobal()" style="background: var(--success);">+ Criar Categoria</button>
-                <button onclick="removerCategoriaGlobal()" style="background: var(--danger);">🗑️ Remover Categoria</button>
-                <button onclick="resetarSistema()" style="background:#64748b; font-size: 0.8rem;">🔄 Resetar</button>
+                <input type="text" id="nova-cat-input" placeholder="Nova categoria...">
+                <button onclick="addCatGlobal()" style="background: var(--success);">+ Criar Categoria</button>
+                <button onclick="removerCatGlobal()" style="background: var(--danger);">🗑️ Remover Categoria</button>
+                <button onclick="localStorage.clear(); location.reload();" style="background:#64748b; font-size: 0.8rem;">🔄 Resetar</button>
             </div>
         </header>
         <div class="tabs" id="tabs-container">
-            <button class="tab active" id="tab-dashboard" onclick="switchTab('dashboard')">📊 Comparativo</button>
+            <button class="tab active" onclick="switchTab('dashboard')">📊 Comparativo</button>
         </div>
         <div id="panels-container">
             <div id="panel-dashboard" class="panel active">
@@ -54,6 +52,7 @@
 
     <script>
         const meses = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+        
         let appData = { db: {}, rendas: {}, categorias: ["Mercado", "Viagens", "Contas", "Diversos"] };
         
         try {
@@ -67,28 +66,18 @@
         });
 
         function save() {
-            try {
-                localStorage.setItem('financas_solucao', JSON.stringify(appData));
-            } catch(e) { }
+            localStorage.setItem('financas_solucao', JSON.stringify(appData));
             render();
-        }
-
-        function resetarSistema() {
-            try {
-                localStorage.clear();
-            } catch(e) { }
-            location.reload();
         }
 
         function switchTab(id) {
             document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
             document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
             
-            const panel = document.getElementById('panel-' + id);
-            if (panel) panel.classList.add('active');
+            const p = document.getElementById('panel-' + id);
+            if (p) p.classList.add('active');
             
-            const tabBtn = document.getElementById('tab-' + id);
-            if (tabBtn) tabBtn.classList.add('active');
+            if (event && event.currentTarget) event.currentTarget.classList.add('active');
         }
 
         function addGasto(m) {
@@ -101,53 +90,32 @@
             
             appData.db[m].push({ dia: d, desc, categoria: cat, valor: v });
             appData.db[m].sort((a,b) => a.dia - b.dia);
-            
-            document.getElementById(`d-${m}`).value = '';
-            document.getElementById(`desc-${m}`).value = '';
-            document.getElementById(`v-${m}`).value = '';
-            
             save();
         }
 
-        function atualizarSeletoresMeses() {
-            meses.forEach(m => {
-                const select = document.getElementById(`cat-${m}`);
-                if (select) {
-                    select.innerHTML = appData.categorias.map(c => `<option value="${c}">${c}</option>`).join('');
-                }
-            });
+        function addCatGlobal() {
+            const input = document.getElementById('nova-cat-input');
+            const nv = input.value.trim();
+            if (nv) {
+                if (appData.categorias.includes(nv)) return alert('Esta categoria já existe');
+                appData.categorias.push(nv);
+                input.value = '';
+                save();
+                location.reload();
+            }
         }
 
-        function adicionarNovaCategoriaGlobal() {
-            const input = document.getElementById('nova-categoria-input');
-            const nomeCategoria = input.value.trim();
-            
-            if (!nomeCategoria) return alert('Digite um nome para a categoria');
-            if (appData.categorias.includes(nomeCategoria)) return alert('Esta categoria já existe');
-            
-            appData.categorias.push(nomeCategoria);
-            input.value = '';
-            
-            atualizarSeletoresMeses();
-            save();
-        }
-
-        function removerCategoriaGlobal() {
-            if (appData.categorias.length === 0) return alert('Não há categorias para remover');
-            
+        function removerCatGlobal() {
             let listaTexto = appData.categorias.map((c, idx) => `${idx + 1} - ${c}`).join('\n');
             let escolha = prompt(`Digite o número da categoria que deseja remover:\n\n${listaTexto}`);
-            
             if (escolha === null) return;
-            
             let index = parseInt(escolha) - 1;
-            if (isNaN(index) || index < 0 || index >= appData.categorias.length) return alert('Opção inválida');
-            
-            let removida = appData.categorias[index];
-            if (confirm(`Tem certeza que deseja remover a categoria "${removida}"?`)) {
+            if (!isNaN(index) && index >= 0 && index < appData.categorias.length) {
                 appData.categorias.splice(index, 1);
-                atualizarSeletoresMeses();
                 save();
+                location.reload();
+            } else {
+                alert('Opção inválida');
             }
         }
 
@@ -184,10 +152,32 @@
         const pc = document.getElementById('panels-container');
         
         meses.forEach(m => {
-            tc.innerHTML += `<button class="tab" id="tab-${m}" onclick="switchTab('${m}')">${m}</button>`;
+            tc.innerHTML += `<button class="tab" onclick="switchTab('${m}')">${m}</button>`;
             pc.innerHTML += `
                 <div id="panel-${m}" class="panel">
                     <h2>${m}</h2>
                     <div class="form-gasto" style="margin: 1rem 0;">
                         Definir Renda: <input type="number" value="${appData.rendas[m]}" onchange="appData.rendas['${m}']=parseFloat(this.value)||0; save();" style="width:100px;">
                     </div>
+                    <div class="form-gasto">
+                        <input type="number" id="d-${m}" placeholder="Dia" style="width:60px;">
+                        <input type="text" id="desc-${m}" placeholder="Descrição">
+                        <select id="cat-${m}">
+                            ${appData.categorias.map(c => `<option value="${c}">${c}</option>`).join('')}
+                        </select>
+                        <input type="number" id="v-${m}" placeholder="Valor">
+                        <button onclick="addGasto('${m}')">Adicionar</button>
+                    </div>
+                    <table>
+                        <thead>
+                            <tr><th>Dia</th><th>Descrição</th><th>Categoria</th><th>Valor</th></tr>
+                        </thead>
+                        <tbody id="tbody-${m}"></tbody>
+                    </table>
+                </div>`;
+        });
+
+        render();
+    </script>
+</body>
+</html>
